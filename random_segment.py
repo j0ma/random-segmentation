@@ -9,11 +9,11 @@ import abc
 
 class RandomSegmenter(abc.ABC):
     @abc.abstractmethod
-    def segment_word(self, word: str) -> str:
+    def segment_word(self, word: str, return_as_list: bool = False) -> str:
         raise NotImplementedError
 
-    def __call__(self, word: str) -> str:
-        return self.segment_word(word)
+    def __call__(self, word: str, return_as_list: bool = False) -> str:
+        return self.segment_word(word, return_as_list=return_as_list)
 
 
 @attr.s(auto_attribs=True)
@@ -21,7 +21,7 @@ class VocabControlledRandomSegmenter(RandomSegmenter):
 
     vocab_size: int = 0
     exclude_original_symbols: bool = False
-    sep = "+"
+    sep: str = "+"
     trained: bool = False
     merges: list = []
     space_underscore = "\u2581"
@@ -66,20 +66,25 @@ class VocabControlledRandomSegmenter(RandomSegmenter):
 
         return sorted(symbol_bigrams)
 
-    def segment_word(self, word) -> str:
+    def segment_word(self, word: str, return_as_list: bool = False) -> str:
         assert (
             self.trained
         ), "Random segmentation with vocabulary control requires training!"
 
-        return self._random_segment_controlled(word)
+        return self._random_segment_controlled(word, return_as_list=return_as_list)
 
-    def _random_segment_controlled(self, word: str, sep: str = "+"):
+    def _random_segment_controlled(self, word: str, return_as_list: bool = False):
         _word = " ".join(c for c in word.replace(" ", self.space_underscore))
 
         for pattern, replacement in self.merges:
             _word = _word.replace(pattern, replacement)
 
-        return "".join(f"{sep}{sw}" for sw in _word.split(" "))
+        return (
+            _word.split(" ")
+
+            if return_as_list
+            else "".join(f"{self.sep}{sw}" for sw in _word.split(" ")).lstrip(self.sep)
+        )
 
 
 @attr.s(auto_attribs=True)
