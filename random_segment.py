@@ -1,4 +1,4 @@
-from typing import Optional, Iterable, Union, Tuple, Set, Sequence
+from typing import Optional, Iterable, Union, Tuple, Set, Sequence, List
 import random
 
 import attr
@@ -29,7 +29,7 @@ class VocabControlledRandomSegmenter(RandomSegmenter):
     def train(
         self,
         words: Optional[Union[Iterable[str], Tuple[str, int]]] = None,
-        symbol_bigram_set: Optional[Sequence[Tuple[str, str]]] = None,
+        symbol_bigram_set: Optional[List[Tuple[str, str]]] = None,
     ) -> None:
         """Trains a new random segmentation model based on a word list."""
         assert (
@@ -48,11 +48,36 @@ class VocabControlledRandomSegmenter(RandomSegmenter):
         ):
             a, b = random.choice(symbol_bigram_set)
             merge_ops.append((f"{a} {b}", f"{a}{b}"))
+            self.update_symbols(symbol_bigram_set, a, b)
 
         self.merges = merge_ops
         self.trained = True
 
-    def get_symbol_bigrams(self, words) -> Sequence[Tuple[str, str]]:
+    def update_symbols(
+        self, symbol_bigram_set: List[Tuple[str, str]], a: str, b: str
+    ) -> None:
+        combined = f"{a}{b}"
+
+        for ix, (first, second) in enumerate(symbol_bigram_set):
+            if (first, second) == (a, b):
+                symbol_bigram_set.pop(ix)
+                ix -= 1
+
+                continue
+            elif first == b:
+                new_tuple = (combined, second)
+            elif second == a:
+                new_tuple = (first, combined)
+            else:
+                new_tuple = (first, second)
+
+            symbol_bigram_set[ix] = new_tuple
+
+    @property
+    def subword_vocabulary(self) -> List[str]:
+        return [b for a, b in self.merges]
+
+    def get_symbol_bigrams(self, words) -> List[Tuple[str, str]]:
         counts_provided = isinstance(words[0], tuple)
         word_iterable = words if counts_provided else ((w, 1) for w in words)
 
