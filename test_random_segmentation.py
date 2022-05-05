@@ -9,6 +9,7 @@ BROWN_WORDLIST = Path("data/brown_wordlist.txt")
 ESTONIAN = Path("data/et_mono")
 ESTONIAN_TAIL = Path("data/et_mono_tail")
 ESTONIAN_TAIL_100k = Path("data/et_mono_tail_100k")
+RSEG_SAVE_PATH = Path("/tmp/rseg_test")
 
 
 class TestControlledSegmentation(unittest.TestCase):
@@ -53,6 +54,14 @@ class TestControlledSegmentation(unittest.TestCase):
         rseg.train(words=sentences)
         print("Done! Here are some merges")
         print(rseg.merges[:10])
+
+        print("Dump to disk:")
+        rseg.save(path=RSEG_SAVE_PATH)
+        del rseg
+        print(f"No more rseg? {'rseg' not in globals() and 'rseg' not in locals()}")
+
+        rseg = VocabControlledRandomSegmenter.load(RSEG_SAVE_PATH)
+        print(f"Loaded: {rseg}")
 
         print("\nNow let's try a sentence:")
         sentence = "The quick brown fox jumped over the lazy dog, said Mary."

@@ -1,5 +1,7 @@
 from typing import Optional, Iterable, Union, Tuple, Set, Sequence, List
+from pathlib import Path
 import random
+import pickle
 
 import attr
 from rich.progress import track
@@ -21,10 +23,21 @@ class VocabControlledRandomSegmenter(RandomSegmenter):
 
     vocab_size: int = 0
     exclude_original_symbols: bool = False
-    sep: str = "+"
+    sep: str = " "
     trained: bool = False
     merges: list = []
     space_underscore = "\u2581"
+
+    def save(self, path: Union[str, Path]) -> None:
+        with open(path, "wb") as f:
+            pickle.dump(attr.asdict(self), f)
+
+    @classmethod
+    def load(cls, path: Union[str, Path]) -> "VocabControlledRandomSegmenter":
+        with open(path, "rb") as f:
+            spec = pickle.load(f)
+
+            return cls(**spec)
 
     def train(
         self,
