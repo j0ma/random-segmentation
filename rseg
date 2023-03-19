@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+from collections import Counter, defaultdict
+import random
+import click
+import nltk
+from tqdm import tqdm
+import sys
+
+
+# @click.option("--codes", "-c", type=click.File("r", encoding="utf-8"), required=True, help="File ")
+
+
+@click.group()
+def cli():
+    pass
+
+
+@cli.command()
+@click.option(
+    "--input-file",
+    "-i",
+    type=click.File("r"),
+    default="-",
+    help="Input file (default: STDIN)",
+)
+@click.option(
+    "--output-file",
+    "-o",
+    type=click.File("w", encoding="utf-8"),
+    default="-",
+    help="Output file (default: STDOUT)",
+)
+def vocab(input_file, output_file):
+
+    token_counts = Counter()
+    for line in input_file:
+        token_counts.update(nltk.word_tokenize(line))
+    for token, count in token_counts.most_common():
+        output_file.write(f"{token}\t{count}\n")
+
+
+@cli.command()
+@click.option(
+    "--input-file",
+    "-i",
+    type=click.File("r"),
+    default="-",
+    help="Input file (default: STDIN)",
+)
+@click.option(
+    "--output-file",
+    "-o",
+    type=click.File("w", encoding="utf-8"),
+    default="-",
+    help="Output file (default: STDOUT)",
+)
+@click.option(
+    "--num-merges", "-n", default=10000, help="No. of merges to perform"
+)
+def learn(input_file, output_file, num_merges):
+
+    symbol_bigram_counts = Counter()
+    word_to_segm = defaultdict(str)
+    for line in input_file:
+        word, word_count = line.split("\t")
+        word_to_segm[word] = " ".join(c for c in word)
+        word_count = int(word_count)
+        char_bigram_counts = Counter(nltk.bigrams(c for c in word))
+        symbol_bigram_counts.update(
+            {
+                bigram: word_count * bigram_count
+                for bigram, bigram_count in char_bigram_counts.items()
+            }
+        )
+
+    for merge_ix in tqdm(range(num_merges)):
+        sym1, sym2 = random.choice(symbol_bigram_counts.most_common())[0]
+        for word, segm in word_to_segm.items():
+            new_segm = segm.replace(f"{sym1} {sym2}", f"{sym1}{sym2}")
+            word_to_segm[word] = new_segm
+            new_tokens = new_segm.split()
+            symbol_bigram_counts.update(nltk.bigrams(new_tokens))
+            del symbol_bigram_counts[(sym1, sym2)]
+
+    word_segms = list(word_to_segm.items())
+    random.shuffle(word_segms)
+    for word, segm in word_segms:
+        output_file.write(f"{word}\t{segm}\n")
+
+
+if __name__ == "__main__":
+    cli()

@@ -25,7 +25,7 @@ class VocabControlledRandomSegmenter(RandomSegmenter):
     exclude_original_symbols: bool = False
     sep: str = " "
     trained: bool = False
-    merges: list = []
+    merges: list = attr.ib(default=[], repr=False)
     space_underscore = "\u2581"
 
     def save(self, path: Union[str, Path]) -> None:
@@ -117,11 +117,14 @@ class VocabControlledRandomSegmenter(RandomSegmenter):
         for pattern, replacement in self.merges:
             _word = _word.replace(pattern, replacement)
 
+        tokens = _word.split(" ")
+
         return (
-            _word.split(" ")
+            
+            tokens
 
             if return_as_list
-            else "".join(f"{self.sep}{sw}" for sw in _word.split(" ")).lstrip(self.sep)
+            else self.sep.join(tokens)
         )
 
 
